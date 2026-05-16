@@ -1,0 +1,1488 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="健身打卡">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.svg">
+  <title>健身饮食打卡</title>
+  <style>
+    :root {
+      --bg: #f6f8f7;
+      --surface: #ffffff;
+      --ink: #17211d;
+      --muted: #66736d;
+      --line: #e6ebe8;
+      --accent: #1f9d72;
+      --accent-strong: #087a58;
+      --accent-soft: #e8f7f0;
+      --blue: #3678d8;
+      --blue-soft: #eaf2ff;
+      --amber: #b66a06;
+      --amber-soft: #fff3df;
+      --danger: #d94848;
+      --danger-soft: #fff0f0;
+      --shadow: 0 8px 24px rgba(22, 39, 32, 0.07);
+      --radius: 8px;
+      --nav-height: 72px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+    }
+
+    .app {
+      width: min(100%, 720px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 18px 14px calc(var(--nav-height) + 24px + env(safe-area-inset-bottom));
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin: 4px 0 16px;
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .date-line {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .pill {
+      display: inline-flex;
+      min-height: 34px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 7px 12px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .view {
+      display: none;
+      animation: fade .16s ease-out;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .panel.compact {
+      padding: 12px;
+      box-shadow: none;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    h2, h3 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .subtle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hero {
+      display: grid;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .day-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .training-name {
+      margin-top: 4px;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .ring {
+      --p: 0deg;
+      width: 92px;
+      height: 92px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at center, #fff 0 58%, transparent 59%),
+        conic-gradient(var(--accent) var(--p), #e8eeeb 0);
+    }
+
+    .ring span {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .metric {
+      min-width: 0;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fbfcfb;
+      padding: 10px;
+    }
+
+    .metric b {
+      display: block;
+      font-size: 15px;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      min-height: 32px;
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: #f4f7f5;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .chip.good {
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      border-color: #ccebdd;
+    }
+
+    .chip.blue {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border-color: #d6e5ff;
+    }
+
+    .check-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .check-row {
+      width: 100%;
+      min-height: 54px;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .check-row.done {
+      border-color: #c7eadb;
+      background: #f4fbf8;
+    }
+
+    .box {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      border: 2px solid #c8d2cd;
+      color: #fff;
+      background: #fff;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .check-row.done .box {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .item-text {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .item-text strong {
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .item-text span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .tag {
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 6px 9px;
+      background: #f3f5f4;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .progress {
+      width: 100%;
+      height: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e8eeeb;
+    }
+
+    .bar {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), #44b5a6);
+      transition: width .2s ease;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    label.field {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: #94d7bd;
+      box-shadow: 0 0 0 3px rgba(31, 157, 114, .12);
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 13px;
+      font-weight: 760;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn.danger {
+      background: var(--danger-soft);
+      border-color: #ffd3d3;
+      color: var(--danger);
+    }
+
+    .btn.ghost {
+      background: #f6f8f7;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      min-height: 96px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 12px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .stat b {
+      display: block;
+      margin-top: 8px;
+      font-size: 24px;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+    }
+
+    .stat em {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-style: normal;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .override-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .override-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 116px 40px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      min-width: 40px;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      padding: 4px 0;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      z-index: 20;
+      width: min(100%, 720px);
+      height: calc(var(--nav-height) + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 2px;
+      padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, .96);
+      backdrop-filter: blur(14px);
+    }
+
+    .nav-btn {
+      min-width: 0;
+      min-height: 52px;
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      border: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--muted);
+      font-weight: 750;
+      font-size: 11px;
+    }
+
+    .nav-btn .nav-icon {
+      font-size: 19px;
+      line-height: 1;
+    }
+
+    .nav-btn.active {
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--nav-height) + 20px + env(safe-area-inset-bottom));
+      z-index: 40;
+      max-width: min(92vw, 420px);
+      transform: translateX(-50%) translateY(16px);
+      opacity: 0;
+      pointer-events: none;
+      border-radius: 999px;
+      background: #162720;
+      color: #fff;
+      padding: 10px 14px;
+      font-size: 13px;
+      transition: .18s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: flex-end;
+      background: rgba(11, 20, 16, .38);
+      padding: 14px;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      width: min(100%, 720px);
+      margin: 0 auto;
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 16px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .22);
+    }
+
+    .modal p {
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 8px 0 14px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    @media (min-width: 640px) {
+      .app {
+        padding-inline: 22px;
+      }
+
+      .hero {
+        padding: 20px;
+      }
+
+      .metric-grid {
+        gap: 10px;
+      }
+
+      .bottom-nav {
+        border-inline: 1px solid var(--line);
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
+      }
+    }
+
+    @media (max-width: 374px) {
+      .app {
+        padding-inline: 10px;
+      }
+
+      .training-name {
+        font-size: 24px;
+      }
+
+      .ring {
+        width: 80px;
+        height: 80px;
+      }
+
+      .metric-grid, .stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .bottom-nav {
+        padding-inline: 4px;
+      }
+
+      .nav-btn {
+        font-size: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="title-block">
+        <h1>健身饮食打卡</h1>
+        <div class="date-line" id="todayText"></div>
+      </div>
+      <div class="pill" id="cyclePill">Day 1</div>
+    </header>
+
+    <main>
+      <section class="view active" data-view="home">
+        <div class="stack">
+          <div class="hero">
+            <div class="hero-main">
+              <div>
+                <div class="day-label" id="homeDayLabel"></div>
+                <div class="training-name" id="homeTrainingName"></div>
+                <div class="subtle" id="homeTargetLine"></div>
+              </div>
+              <div class="ring" id="homeRing"><span id="homeRate">0%</span></div>
+            </div>
+            <div class="metric-grid" id="targetMetrics"></div>
+            <div class="progress"><div class="bar" id="homeBar"></div></div>
+            <div class="summary-row">
+              <span>今日完成率</span>
+              <strong id="homeDoneText">0/0</strong>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>饮食计划</h2>
+                <div class="subtle" id="dietHint"></div>
+              </div>
+              <button class="btn ghost" data-jump="diet">去打卡</button>
+            </div>
+            <div class="chips" id="dietPlanChips"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>训练计划</h2>
+                <div class="subtle" id="trainingHint"></div>
+              </div>
+              <button class="btn ghost" data-jump="training">去训练</button>
+            </div>
+            <div class="check-list" id="homeWorkoutPreview"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="diet">
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>饮食打卡</h2>
+                <div class="subtle" id="dietTargetText"></div>
+              </div>
+              <span class="pill" id="dietRate">0%</span>
+            </div>
+            <div class="progress"><div class="bar" id="dietBar"></div></div>
+          </div>
+          <div class="check-list" id="dietList"></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="training">
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>训练打卡</h2>
+                <div class="subtle" id="trainingTargetText"></div>
+              </div>
+              <span class="pill" id="trainingRate">0%</span>
+            </div>
+            <div class="progress"><div class="bar" id="trainingBar"></div></div>
+          </div>
+          <div class="check-list" id="trainingList"></div>
+          <div class="panel">
+            <label class="field">
+              训练备注
+              <textarea id="trainingNote" placeholder="重量、状态、泵感、疼痛或需要调整的动作"></textarea>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="record">
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>身体记录</h2>
+                <div class="subtle">最近 7 天平均体重：<strong id="avgWeight">暂无</strong></div>
+              </div>
+              <span class="pill" id="recordStatus">今日</span>
+            </div>
+            <div class="form-grid">
+              <div class="two">
+                <label class="field">体重 kg<input id="weightInput" inputmode="decimal" type="number" step="0.01" placeholder="74.35"></label>
+                <label class="field">腰围 cm<input id="waistInput" inputmode="decimal" type="number" step="0.1" placeholder="例如 82"></label>
+              </div>
+              <label class="field">睡眠小时<input id="sleepInput" inputmode="decimal" type="number" step="0.1" placeholder="例如 7.5"></label>
+              <label class="field">今日状态<textarea id="moodInput" placeholder="精神、饥饿感、训练状态、压力等"></textarea></label>
+              <button class="btn primary" id="saveRecord">保存记录</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="stats">
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>统计</h2>
+                <div class="subtle">按最近 7 天滚动计算，更适合“练三休一”。</div>
+              </div>
+            </div>
+            <div class="stat-grid" id="statsGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="settings">
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>训练周期</h2>
+                <div class="subtle">起始日期会被视为 Day 1，然后按练三休一循环。</div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <label class="field">起始日期<input id="startDateInput" type="date"></label>
+              <button class="btn primary" id="saveStartDate">保存起始日期</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>手动修改某一天</h2>
+                <div class="subtle">适合出差、补练、临时休息。留空则自动计算。</div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="two">
+                <label class="field">日期<input id="overrideDate" type="date"></label>
+                <label class="field">类型
+                  <select id="overrideDay">
+                    <option value="1">Day 1 胸 + 腹</option>
+                    <option value="2">Day 2 背 + 臂</option>
+                    <option value="3">Day 3 肩 + 腿</option>
+                    <option value="4">Day 4 休息</option>
+                  </select>
+                </label>
+              </div>
+              <button class="btn primary" id="addOverride">保存修改</button>
+              <div class="override-list" id="overrideList"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>数据备份</h2>
+                <div class="subtle">导出 JSON 可用于备份；导入会合并恢复本地数据。</div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button class="btn" id="exportData">导出 JSON</button>
+              <label class="btn" for="importFile">导入 JSON</label>
+              <input class="sr-only" id="importFile" type="file" accept="application/json,.json">
+              <button class="btn danger" id="clearData">清空全部数据</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="底部导航">
+    <button class="nav-btn active" data-nav="home"><span class="nav-icon">⌂</span><span>首页</span></button>
+    <button class="nav-btn" data-nav="diet"><span class="nav-icon">✓</span><span>饮食</span></button>
+    <button class="nav-btn" data-nav="training"><span class="nav-icon">▦</span><span>训练</span></button>
+    <button class="nav-btn" data-nav="record"><span class="nav-icon">＋</span><span>记录</span></button>
+    <button class="nav-btn" data-nav="stats"><span class="nav-icon">↗</span><span>统计</span></button>
+    <button class="nav-btn" data-nav="settings"><span class="nav-icon">⚙</span><span>设置</span></button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal">
+      <h2 id="confirmTitle">确认清空全部数据？</h2>
+      <p>这会删除本机 localStorage 中的打卡、身体记录、周期设置和手动修改。建议先导出 JSON 备份。</p>
+      <div class="btn-row">
+        <button class="btn danger" id="confirmClear">确认清空</button>
+        <button class="btn" id="cancelClear">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "personal-fitness-pwa-v1";
+      const today = new Date();
+      const todayKey = formatDate(today);
+
+      const dayPlans = {
+        1: {
+          title: "胸 + 腹",
+          type: "训练日",
+          calories: "2050–2200 kcal",
+          protein: "150–165g",
+          water: "2.5–3L",
+          dietHint: "控制热量，训练前后保证碳水和蛋白质。",
+          workouts: [
+            ["上斜哑铃卧推", "4×8–12"],
+            ["平板卧推/器械推胸", "4×8–12"],
+            ["坐姿夹胸/绳索夹胸", "4×12–15"],
+            ["俯卧撑/双杠臂屈伸/下斜推胸", "4×10–12"],
+            ["绳索卷腹", "4×12–15"],
+            ["悬垂举腿/仰卧举腿", "4×10–15"]
+          ]
+        },
+        2: {
+          title: "背 + 臂",
+          type: "训练日",
+          calories: "2050–2200 kcal",
+          protein: "150–165g",
+          water: "2.5–3L",
+          dietHint: "拉背日注意蛋白质稳定，晚餐别失控。",
+          workouts: [
+            ["引体向上/高位下拉", "4×8–12"],
+            ["坐姿划船", "4×8–12"],
+            ["单臂哑铃划船/胸托划船", "4×10–12"],
+            ["直臂下压/面拉", "4×12–15"],
+            ["哑铃弯举", "4×10–12"],
+            ["绳索下压", "4×10–12"],
+            ["可选：锤式弯举", "3×12"],
+            ["可选：过顶臂屈伸", "3×12"]
+          ]
+        },
+        3: {
+          title: "肩 + 腿",
+          type: "训练日",
+          calories: "2050–2200 kcal",
+          protein: "150–165g",
+          water: "2.5–3L",
+          dietHint: "肩腿日主食可略高，优先放在训练前后。",
+          workouts: [
+            ["坐姿肩推", "4×8–12"],
+            ["哑铃侧平举", "4×12–20"],
+            ["绳索侧平举", "4×12–20"],
+            ["反向飞鸟/面拉", "4×12–20"],
+            ["腿举/深蹲", "4×8–12"],
+            ["罗马尼亚硬拉", "4×8–12"],
+            ["腿弯举/腿屈伸", "3–4×12–15"]
+          ]
+        },
+        4: {
+          title: "休息",
+          type: "休息日",
+          calories: "1850–2000 kcal",
+          protein: "150–165g",
+          water: "2.5–3L",
+          dietHint: "热量略低，维持蛋白质和饮水，不吃夜宵。",
+          workouts: [
+            ["步数", "8000+"],
+            ["拉伸", "10分钟，可选"],
+            ["不吃夜宵", "完成"],
+            ["饮水达标", "2.5–3L"]
+          ]
+        }
+      };
+
+      const dietItems = [
+        ["breakfast", "早餐", "优先高蛋白，搭配适量碳水"],
+        ["lunch", "午餐", "蛋白质 + 蔬菜 + 主食"],
+        ["preworkout", "训练前加餐", "水果/面包/酸奶等，休息日可跳过"],
+        ["dinner", "晚餐", "清淡高蛋白，控制油脂"],
+        ["protein", "蛋白粉", "补齐全天蛋白质"],
+        ["water", "饮水", "2.5–3L"],
+        ["fruit", "水果", "1–2份，不用果汁替代"],
+        ["noSnack", "无夜宵", "睡前不额外加餐"]
+      ];
+
+      const defaultData = {
+        settings: {
+          startDate: todayKey,
+          overrides: {}
+        },
+        days: {}
+      };
+
+      let data = loadData();
+
+      const els = {
+        todayText: $("#todayText"),
+        cyclePill: $("#cyclePill"),
+        homeDayLabel: $("#homeDayLabel"),
+        homeTrainingName: $("#homeTrainingName"),
+        homeTargetLine: $("#homeTargetLine"),
+        homeRing: $("#homeRing"),
+        homeRate: $("#homeRate"),
+        homeBar: $("#homeBar"),
+        homeDoneText: $("#homeDoneText"),
+        targetMetrics: $("#targetMetrics"),
+        dietHint: $("#dietHint"),
+        dietPlanChips: $("#dietPlanChips"),
+        trainingHint: $("#trainingHint"),
+        homeWorkoutPreview: $("#homeWorkoutPreview"),
+        dietTargetText: $("#dietTargetText"),
+        dietRate: $("#dietRate"),
+        dietBar: $("#dietBar"),
+        dietList: $("#dietList"),
+        trainingTargetText: $("#trainingTargetText"),
+        trainingRate: $("#trainingRate"),
+        trainingBar: $("#trainingBar"),
+        trainingList: $("#trainingList"),
+        trainingNote: $("#trainingNote"),
+        avgWeight: $("#avgWeight"),
+        recordStatus: $("#recordStatus"),
+        weightInput: $("#weightInput"),
+        waistInput: $("#waistInput"),
+        sleepInput: $("#sleepInput"),
+        moodInput: $("#moodInput"),
+        statsGrid: $("#statsGrid"),
+        startDateInput: $("#startDateInput"),
+        overrideDate: $("#overrideDate"),
+        overrideDay: $("#overrideDay"),
+        overrideList: $("#overrideList"),
+        toast: $("#toast"),
+        confirmModal: $("#confirmModal")
+      };
+
+      initManifest();
+      bindEvents();
+      render();
+
+      function $(selector) {
+        return document.querySelector(selector);
+      }
+
+      function loadData() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          return mergeData(defaultData, parsed || {});
+        } catch {
+          return structuredClone(defaultData);
+        }
+      }
+
+      function mergeData(base, incoming) {
+        return {
+          settings: {
+            ...base.settings,
+            ...(incoming.settings || {}),
+            overrides: {
+              ...(base.settings.overrides || {}),
+              ...((incoming.settings && incoming.settings.overrides) || {})
+            }
+          },
+          days: {
+            ...(base.days || {}),
+            ...(incoming.days || {})
+          }
+        };
+      }
+
+      function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+
+      function getDay(dateKey = todayKey) {
+        if (!data.days[dateKey]) {
+          data.days[dateKey] = { diet: {}, workout: {}, record: {}, note: "" };
+        }
+        data.days[dateKey].diet ||= {};
+        data.days[dateKey].workout ||= {};
+        data.days[dateKey].record ||= {};
+        data.days[dateKey].note ||= "";
+        return data.days[dateKey];
+      }
+
+      function getCycleDay(dateKey) {
+        const override = data.settings.overrides?.[dateKey];
+        if (override) return Number(override);
+        const start = parseDate(data.settings.startDate || todayKey);
+        const current = parseDate(dateKey);
+        const diff = Math.floor((current - start) / 86400000);
+        return ((diff % 4 + 4) % 4) + 1;
+      }
+
+      function bindEvents() {
+        document.querySelectorAll("[data-nav]").forEach(btn => {
+          btn.addEventListener("click", () => setView(btn.dataset.nav));
+        });
+
+        document.querySelectorAll("[data-jump]").forEach(btn => {
+          btn.addEventListener("click", () => setView(btn.dataset.jump));
+        });
+
+        els.trainingNote.addEventListener("input", () => {
+          getDay().note = els.trainingNote.value;
+          saveData();
+        });
+
+        $("#saveRecord").addEventListener("click", () => {
+          const record = getDay().record;
+          record.weight = numberOrEmpty(els.weightInput.value);
+          record.waist = numberOrEmpty(els.waistInput.value);
+          record.sleep = numberOrEmpty(els.sleepInput.value);
+          record.mood = els.moodInput.value.trim();
+          saveData();
+          render();
+          showToast("身体记录已保存");
+        });
+
+        $("#saveStartDate").addEventListener("click", () => {
+          data.settings.startDate = els.startDateInput.value || todayKey;
+          saveData();
+          render();
+          showToast("训练周期起始日期已保存");
+        });
+
+        $("#addOverride").addEventListener("click", () => {
+          const date = els.overrideDate.value || todayKey;
+          data.settings.overrides ||= {};
+          data.settings.overrides[date] = Number(els.overrideDay.value);
+          saveData();
+          render();
+          showToast("已保存手动修改");
+        });
+
+        $("#exportData").addEventListener("click", exportData);
+        $("#importFile").addEventListener("change", importData);
+        $("#clearData").addEventListener("click", () => els.confirmModal.classList.add("show"));
+        $("#cancelClear").addEventListener("click", () => els.confirmModal.classList.remove("show"));
+        $("#confirmClear").addEventListener("click", () => {
+          localStorage.removeItem(STORAGE_KEY);
+          data = structuredClone(defaultData);
+          els.confirmModal.classList.remove("show");
+          render();
+          showToast("全部数据已清空");
+        });
+
+        els.confirmModal.addEventListener("click", event => {
+          if (event.target === els.confirmModal) els.confirmModal.classList.remove("show");
+        });
+      }
+
+      function setView(view) {
+        document.querySelectorAll(".view").forEach(el => {
+          el.classList.toggle("active", el.dataset.view === view);
+        });
+        document.querySelectorAll("[data-nav]").forEach(el => {
+          el.classList.toggle("active", el.dataset.nav === view);
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function render() {
+        const cycle = getCycleDay(todayKey);
+        const plan = dayPlans[cycle];
+        const day = getDay(todayKey);
+        els.todayText.textContent = new Intl.DateTimeFormat("zh-CN", {
+          month: "long",
+          day: "numeric",
+          weekday: "long"
+        }).format(today);
+        els.cyclePill.textContent = `Day ${cycle}`;
+
+        renderHome(cycle, plan, day);
+        renderDiet(cycle, plan, day);
+        renderTraining(cycle, plan, day);
+        renderRecord(day);
+        renderStats();
+        renderSettings();
+        saveData();
+      }
+
+      function renderHome(cycle, plan, day) {
+        const completion = getDailyCompletion(todayKey);
+        els.homeDayLabel.textContent = `Day ${cycle} · ${plan.type}`;
+        els.homeTrainingName.textContent = plan.title;
+        els.homeTargetLine.textContent = `热量 ${plan.calories} · 蛋白质 ${plan.protein} · 饮水 ${plan.water}`;
+        setProgress(els.homeBar, completion.rate);
+        els.homeRing.style.setProperty("--p", `${completion.rate * 3.6}deg`);
+        els.homeRate.textContent = `${completion.rate}%`;
+        els.homeDoneText.textContent = `${completion.done}/${completion.total}`;
+
+        els.targetMetrics.innerHTML = [
+          metricHtml(plan.calories, "热量"),
+          metricHtml(plan.protein, "蛋白质"),
+          metricHtml(plan.water, "饮水")
+        ].join("");
+
+        els.dietHint.textContent = plan.dietHint;
+        els.dietPlanChips.innerHTML = [
+          "早餐", "午餐", cycle === 3 ? "主食略高" : "训练前加餐", "晚餐", "蛋白粉", "饮水达标", "水果", "无夜宵"
+        ].map((label, index) => `<span class="chip ${index < 2 ? "good" : index === 2 ? "blue" : ""}">${label}</span>`).join("");
+
+        els.trainingHint.textContent = cycle === 4 ? "休息日重点是步数、拉伸、饮水和不吃夜宵。" : "按动作逐项完成，重量和状态可写在训练备注。";
+        els.homeWorkoutPreview.innerHTML = plan.workouts.slice(0, 4).map(([name, reps]) => checkRowHtml({
+          done: Boolean(day.workout[workoutKey(name)]),
+          title: name,
+          detail: reps,
+          tag: "预览",
+          disabled: true
+        })).join("");
+      }
+
+      function renderDiet(cycle, plan, day) {
+        const rate = calcRate(dietItems, item => day.diet[item[0]]);
+        els.dietTargetText.textContent = `${plan.type} · ${plan.calories} · 蛋白质 ${plan.protein} · 饮水 ${plan.water}`;
+        els.dietRate.textContent = `${rate.rate}%`;
+        setProgress(els.dietBar, rate.rate);
+        els.dietList.innerHTML = dietItems.map(item => {
+          const [key, title, detail] = item;
+          return checkRowHtml({
+            done: Boolean(day.diet[key]),
+            title,
+            detail,
+            tag: key === "preworkout" && cycle === 4 ? "可选" : "饮食",
+            id: `diet-${key}`
+          });
+        }).join("");
+        dietItems.forEach(([key]) => {
+          $(`#diet-${key}`).addEventListener("click", () => {
+            day.diet[key] = !day.diet[key];
+            saveData();
+            render();
+          });
+        });
+      }
+
+      function renderTraining(cycle, plan, day) {
+        const rate = calcRate(plan.workouts, ([name]) => day.workout[workoutKey(name)]);
+        els.trainingTargetText.textContent = cycle === 4 ? "休息日恢复目标" : `${plan.title} · ${plan.workouts.length} 个动作`;
+        els.trainingRate.textContent = `${rate.rate}%`;
+        setProgress(els.trainingBar, rate.rate);
+        els.trainingList.innerHTML = plan.workouts.map(([name, reps]) => {
+          const key = workoutKey(name);
+          return checkRowHtml({
+            done: Boolean(day.workout[key]),
+            title: name,
+            detail: reps,
+            tag: cycle === 4 ? "恢复" : "训练",
+            id: `workout-${key}`
+          });
+        }).join("");
+        plan.workouts.forEach(([name]) => {
+          const key = workoutKey(name);
+          $(`#workout-${key}`).addEventListener("click", () => {
+            day.workout[key] = !day.workout[key];
+            saveData();
+            render();
+          });
+        });
+        els.trainingNote.value = day.note || "";
+      }
+
+      function renderRecord(day) {
+        const record = day.record || {};
+        els.weightInput.value = record.weight ?? "";
+        els.waistInput.value = record.waist ?? "";
+        els.sleepInput.value = record.sleep ?? "";
+        els.moodInput.value = record.mood ?? "";
+        els.avgWeight.textContent = averageRecent("weight", 7);
+        els.recordStatus.textContent = record.weight || record.waist || record.sleep || record.mood ? "已记录" : "今日";
+      }
+
+      function renderStats() {
+        const diet = averageCompletion(7, "diet");
+        const training = averageCompletion(7, "training");
+        const streak = calcStreak();
+        const weightChange = changeText("weight", "kg");
+        const waistChange = changeText("waist", "cm");
+        els.statsGrid.innerHTML = [
+          statHtml("本周饮食完成率", `${diet}%`, "最近 7 天饮食项平均完成"),
+          statHtml("本周训练完成率", `${training}%`, "最近 7 天训练项平均完成"),
+          statHtml("连续打卡天数", `${streak} 天`, "饮食或训练有任意完成即计入"),
+          statHtml("最近体重变化", weightChange.main, weightChange.sub),
+          statHtml("最近腰围变化", waistChange.main, waistChange.sub)
+        ].join("");
+      }
+
+      function renderSettings() {
+        els.startDateInput.value = data.settings.startDate || todayKey;
+        els.overrideDate.value ||= todayKey;
+        const entries = Object.entries(data.settings.overrides || {}).sort((a, b) => b[0].localeCompare(a[0]));
+        els.overrideList.innerHTML = entries.length ? entries.map(([date, day]) => `
+          <div class="override-row">
+            <div class="metric"><b>${date}</b><span>Day ${day} · ${dayPlans[day].title}</span></div>
+            <select data-override-select="${date}">
+              <option value="1" ${Number(day) === 1 ? "selected" : ""}>Day 1</option>
+              <option value="2" ${Number(day) === 2 ? "selected" : ""}>Day 2</option>
+              <option value="3" ${Number(day) === 3 ? "selected" : ""}>Day 3</option>
+              <option value="4" ${Number(day) === 4 ? "selected" : ""}>Day 4</option>
+            </select>
+            <button class="icon-btn" data-remove-override="${date}" aria-label="删除 ${date} 的手动修改">×</button>
+          </div>
+        `).join("") : `<div class="empty">暂无手动修改。</div>`;
+
+        document.querySelectorAll("[data-remove-override]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            delete data.settings.overrides[btn.dataset.removeOverride];
+            saveData();
+            render();
+          });
+        });
+
+        document.querySelectorAll("[data-override-select]").forEach(select => {
+          select.addEventListener("change", () => {
+            data.settings.overrides[select.dataset.overrideSelect] = Number(select.value);
+            saveData();
+            render();
+          });
+        });
+      }
+
+      function getDailyCompletion(dateKey) {
+        const cycle = getCycleDay(dateKey);
+        const plan = dayPlans[cycle];
+        const day = getDay(dateKey);
+        const dietDone = dietItems.filter(([key]) => day.diet[key]).length;
+        const workoutDone = plan.workouts.filter(([name]) => day.workout[workoutKey(name)]).length;
+        const total = dietItems.length + plan.workouts.length;
+        const done = dietDone + workoutDone;
+        return { done, total, rate: total ? Math.round(done / total * 100) : 0 };
+      }
+
+      function averageCompletion(days, kind) {
+        let sum = 0;
+        let count = 0;
+        for (let i = 0; i < days; i++) {
+          const key = addDays(today, -i);
+          const cycle = getCycleDay(key);
+          const day = data.days[key] || { diet: {}, workout: {} };
+          if (kind === "diet") {
+            sum += calcRate(dietItems, item => day.diet?.[item[0]]).rate;
+          } else {
+            sum += calcRate(dayPlans[cycle].workouts, ([name]) => day.workout?.[workoutKey(name)]).rate;
+          }
+          count++;
+        }
+        return count ? Math.round(sum / count) : 0;
+      }
+
+      function calcStreak() {
+        let streak = 0;
+        for (let i = 0; i < 365; i++) {
+          const key = addDays(today, -i);
+          const day = data.days[key];
+          if (!day) break;
+          const cycle = getCycleDay(key);
+          const anyDiet = dietItems.some(([item]) => day.diet?.[item]);
+          const anyWorkout = dayPlans[cycle].workouts.some(([name]) => day.workout?.[workoutKey(name)]);
+          const anyRecord = day.record && Object.values(day.record).some(value => value !== "" && value !== undefined && value !== null);
+          if (anyDiet || anyWorkout || anyRecord) streak++;
+          else break;
+        }
+        return streak;
+      }
+
+      function averageRecent(field, days) {
+        const values = [];
+        for (let i = 0; i < days; i++) {
+          const record = data.days[addDays(today, -i)]?.record;
+          const value = Number(record?.[field]);
+          if (Number.isFinite(value) && value > 0) values.push(value);
+        }
+        if (!values.length) return "暂无";
+        const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+        return `${avg.toFixed(2)} kg`;
+      }
+
+      function changeText(field, unit) {
+        const records = Object.entries(data.days)
+          .map(([date, day]) => ({ date, value: Number(day.record?.[field]) }))
+          .filter(item => Number.isFinite(item.value) && item.value > 0)
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        if (records.length < 2) return { main: "暂无", sub: "至少需要 2 条记录" };
+        const first = records[0];
+        const last = records[records.length - 1];
+        const diff = last.value - first.value;
+        const sign = diff > 0 ? "+" : "";
+        return {
+          main: `${sign}${diff.toFixed(2)} ${unit}`,
+          sub: `${first.date} → ${last.date}`
+        };
+      }
+
+      function calcRate(items, predicate) {
+        const total = items.length;
+        const done = items.filter(predicate).length;
+        return { done, total, rate: total ? Math.round(done / total * 100) : 0 };
+      }
+
+      function checkRowHtml({ done, title, detail, tag, id, disabled }) {
+        const attrs = disabled ? "disabled tabindex='-1'" : `id="${id}"`;
+        return `
+          <button class="check-row ${done ? "done" : ""}" ${attrs}>
+            <span class="box">${done ? "✓" : ""}</span>
+            <span class="item-text"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span></span>
+            <span class="tag">${escapeHtml(tag || "")}</span>
+          </button>
+        `;
+      }
+
+      function metricHtml(value, label) {
+        return `<div class="metric"><b>${value}</b><span>${label}</span></div>`;
+      }
+
+      function statHtml(label, value, detail) {
+        return `<div class="stat"><span>${label}</span><b>${value}</b><em>${detail}</em></div>`;
+      }
+
+      function setProgress(el, rate) {
+        el.style.width = `${Math.max(0, Math.min(100, rate))}%`;
+      }
+
+      function workoutKey(name) {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+          hash = ((hash << 5) - hash) + name.charCodeAt(i);
+          hash |= 0;
+        }
+        return `w${Math.abs(hash)}`;
+      }
+
+      function numberOrEmpty(value) {
+        const num = Number(value);
+        return Number.isFinite(num) && value !== "" ? num : "";
+      }
+
+      function parseDate(key) {
+        const [year, month, day] = key.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      }
+
+      function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function addDays(date, amount) {
+        const next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        next.setDate(next.getDate() + amount);
+        return formatDate(next);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function showToast(message) {
+        els.toast.textContent = message;
+        els.toast.classList.add("show");
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 1800);
+      }
+
+      function exportData() {
+        const payload = {
+          app: "personal-fitness-pwa",
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          data
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `fitness-backup-${todayKey}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast("JSON 已导出");
+      }
+
+      function importData(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(reader.result);
+            const incoming = parsed.data || parsed;
+            data = mergeData(data, incoming);
+            saveData();
+            render();
+            showToast("JSON 已导入");
+          } catch {
+            showToast("导入失败：JSON 格式不正确");
+          } finally {
+            event.target.value = "";
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function initManifest() {
+        if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+          navigator.serviceWorker.register("./sw.js").catch(() => {});
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
