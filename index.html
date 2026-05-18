@@ -316,6 +316,45 @@
       background: var(--accent);
     }
 
+    .water-card {
+      display: grid;
+      gap: 11px;
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .water-card.done {
+      border-color: #c7eadb;
+      background: #f4fbf8;
+    }
+
+    .water-head {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .water-total {
+      font-size: 18px;
+      font-weight: 850;
+      color: var(--accent-strong);
+      white-space: nowrap;
+    }
+
+    .water-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .water-actions .btn {
+      min-height: 42px;
+      padding-inline: 6px;
+    }
+
     .item-text {
       min-width: 0;
       display: grid;
@@ -833,7 +872,11 @@
             </div>
             <div class="form-grid">
               <label class="field">起始日期<input id="startDateInput" type="date"></label>
-              <button class="btn primary" id="saveStartDate">保存起始日期</button>
+              <div class="btn-row">
+                <button class="btn primary" id="saveStartDate">保存起始日期</button>
+                <button class="btn" id="setStartToday">设为今天</button>
+              </div>
+              <div class="subtle" id="startDateHint"></div>
             </div>
           </div>
 
@@ -841,7 +884,7 @@
             <div class="panel-head">
               <div>
                 <h2>手动修改某一天</h2>
-                <div class="subtle">适合出差、补练、临时休息。留空则自动计算。</div>
+                <div class="subtle">“只改这一天”适合临时调整；“从这天起重排循环”会让后续日期按新的 Day 顺序继续走。</div>
               </div>
             </div>
             <div class="form-grid">
@@ -856,7 +899,10 @@
                   </select>
                 </label>
               </div>
-              <button class="btn primary" id="addOverride">保存修改</button>
+              <div class="btn-row">
+                <button class="btn primary" id="addOverride">只改这一天</button>
+                <button class="btn" id="rebaseCycle">从这天起重排循环</button>
+              </div>
               <div class="override-list" id="overrideList"></div>
             </div>
           </div>
@@ -997,6 +1043,8 @@
         ["fruit", "水果", "1–2份，不用果汁替代"],
         ["noSnack", "无夜宵", "睡前不额外加餐"]
       ];
+      const WATER_GOAL_MIN = 2500;
+      const WATER_GOAL_IDEAL = 3000;
 
       const dietDetails = {
         breakfast: {
@@ -1113,6 +1161,7 @@
         moodInput: $("#moodInput"),
         statsGrid: $("#statsGrid"),
         startDateInput: $("#startDateInput"),
+        startDateHint: $("#startDateHint"),
         overrideDate: $("#overrideDate"),
         overrideDay: $("#overrideDay"),
         overrideList: $("#overrideList"),
@@ -1208,10 +1257,17 @@
         });
 
         $("#saveStartDate").addEventListener("click", () => {
-          data.settings.startDate = els.startDateInput.value || todayKey;
-          saveData();
-          render();
-          showToast("训练周期起始日期已保存");
+          saveStartDate(els.startDateInput.value || todayKey, "训练周期起始日期已保存");
+        });
+
+        $("#setStartToday").addEventListener("click", () => {
+          saveStartDate(todayKey, "起始日期已设为今天");
+        });
+
+        els.startDateInput.addEventListener("change", () => {
+          if (els.startDateInput.value) {
+            saveStartDate(els.startDateInput.value, "已自动保存起始日期");
+          }
         });
 
         $("#addOverride").addEventListener("click", () => {
@@ -1221,6 +1277,15 @@
           saveData();
           render();
           showToast("已保存手动修改");
+        });
+
+        $("#rebaseCycle").addEventListener("click", () => {
+          const date = els.overrideDate.value || todayKey;
+          const day = Number(els.overrideDay.value);
+          rebaseCycleFrom(date, day);
+          saveData();
+          render();
+          showToast(`已从 ${date} 起重排循环`);
         });
 
         $("#exportData").addEventListener("click", exportData);
@@ -1253,6 +1318,21 @@
           el.classList.toggle("active", el.dataset.nav === view);
         });
         window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function saveStartDate(dateKey, message) {
+        data.settings.startDate = dateKey;
+        saveData();
+        render();
+        showToast(message);
+      }
+
+      function rebaseCycleFrom(dateKey, targetDay) {
+        data.settings.startDate = addDaysToKey(dateKey, -(targetDay - 1));
+        data.settings.overrides ||= {};
+        Object.keys(data.settings.overrides).forEach(key => {
+          if (key >= dateKey) delete data.settings.overrides[key];
+        });
       }
 
       function render() {
@@ -1288,7 +1368,7 @@
         els.targetMetrics.innerHTML = [
           metricHtml(plan.calories, "热量"),
           metricHtml(plan.protein, "蛋白质"),
-          metricHtml(plan.water, "饮水")
+          metricHtml(`${getWaterMl(day)} / ${WATER_GOAL_MIN}ml`, "今日饮水")
         ].join("");
 
         els.dietHint.textContent = plan.dietHint;
@@ -1307,14 +1387,15 @@
       }
 
       function renderDiet(cycle, plan, day) {
-        const rate = calcRate(dietItems, item => day.diet[item[0]]);
-        els.dietTargetText.textContent = `${plan.type} · ${plan.calories} · 蛋白质 ${plan.protein} · 饮水 ${plan.water}`;
+        const rate = calcRate(dietItems, item => isDietItemDone(day, item[0]));
+        els.dietTargetText.textContent = `${plan.type} · ${plan.calories} · 蛋白质 ${plan.protein} · 今日已喝 ${getWaterMl(day)}ml`;
         els.dietRate.textContent = `${rate.rate}%`;
         setProgress(els.dietBar, rate.rate);
         els.dietList.innerHTML = dietItems.map(item => {
           const [key, title, detail] = item;
+          if (key === "water") return waterRowHtml(day);
           return checkRowHtml({
-            done: Boolean(day.diet[key]),
+            done: isDietItemDone(day, key),
             title,
             detail,
             tag: "说明",
@@ -1323,6 +1404,7 @@
           });
         }).join("");
         dietItems.forEach(([key]) => {
+          if (key === "water") return;
           $(`#diet-${key}`).addEventListener("click", () => {
             day.diet[key] = !day.diet[key];
             saveData();
@@ -1334,6 +1416,18 @@
             event.stopPropagation();
             openDietDetail(button.dataset.dietDetail);
           });
+        });
+        document.querySelectorAll("[data-water-add]").forEach(button => {
+          button.addEventListener("click", () => {
+            changeWater(day, Number(button.dataset.waterAdd));
+            saveData();
+            render();
+          });
+        });
+        $("[data-water-reset]")?.addEventListener("click", () => {
+          setWaterMl(day, 0);
+          saveData();
+          render();
         });
       }
 
@@ -1390,6 +1484,8 @@
 
       function renderSettings() {
         els.startDateInput.value = data.settings.startDate || todayKey;
+        const todayCycle = getCycleDay(todayKey);
+        els.startDateHint.textContent = `当前起始日：${data.settings.startDate || todayKey}；今天自动计算为 Day ${todayCycle} · ${dayPlans[todayCycle].title}`;
         els.overrideDate.value ||= todayKey;
         const entries = Object.entries(data.settings.overrides || {}).sort((a, b) => b[0].localeCompare(a[0]));
         els.overrideList.innerHTML = entries.length ? entries.map(([date, day]) => `
@@ -1426,7 +1522,7 @@
         const cycle = getCycleDay(dateKey);
         const plan = dayPlans[cycle];
         const day = getDay(dateKey);
-        const dietDone = dietItems.filter(([key]) => day.diet[key]).length;
+        const dietDone = dietItems.filter(([key]) => isDietItemDone(day, key)).length;
         const workoutDone = plan.workouts.filter(([name]) => day.workout[workoutKey(name)]).length;
         const total = dietItems.length + plan.workouts.length;
         const done = dietDone + workoutDone;
@@ -1441,7 +1537,7 @@
           const cycle = getCycleDay(key);
           const day = data.days[key] || { diet: {}, workout: {} };
           if (kind === "diet") {
-            sum += calcRate(dietItems, item => day.diet?.[item[0]]).rate;
+            sum += calcRate(dietItems, item => isDietItemDone(day, item[0])).rate;
           } else {
             sum += calcRate(dayPlans[cycle].workouts, ([name]) => day.workout?.[workoutKey(name)]).rate;
           }
@@ -1457,7 +1553,7 @@
           const day = data.days[key];
           if (!day) break;
           const cycle = getCycleDay(key);
-          const anyDiet = dietItems.some(([item]) => day.diet?.[item]);
+          const anyDiet = dietItems.some(([item]) => isDietItemDone(day, item)) || getWaterMl(day) > 0;
           const anyWorkout = dayPlans[cycle].workouts.some(([name]) => day.workout?.[workoutKey(name)]);
           const anyRecord = day.record && Object.values(day.record).some(value => value !== "" && value !== undefined && value !== null);
           if (anyDiet || anyWorkout || anyRecord) streak++;
@@ -1513,10 +1609,58 @@
         els.dietDetailModal.classList.remove("show");
       }
 
+      function isDietItemDone(day, key) {
+        if (key === "water") return getWaterMl(day) >= WATER_GOAL_MIN;
+        return Boolean(day.diet?.[key]);
+      }
+
+      function getWaterMl(day) {
+        const value = Number(day.waterMl);
+        if (Number.isFinite(value) && value > 0) return value;
+        return day.diet?.water ? WATER_GOAL_MIN : 0;
+      }
+
+      function setWaterMl(day, value) {
+        const next = Math.max(0, Math.round(Number(value) || 0));
+        day.waterMl = next;
+        day.diet ||= {};
+        day.diet.water = next >= WATER_GOAL_MIN;
+      }
+
+      function changeWater(day, amount) {
+        setWaterMl(day, getWaterMl(day) + amount);
+      }
+
       function calcRate(items, predicate) {
         const total = items.length;
         const done = items.filter(predicate).length;
         return { done, total, rate: total ? Math.round(done / total * 100) : 0 };
+      }
+
+      function waterRowHtml(day) {
+        const ml = getWaterMl(day);
+        const done = ml >= WATER_GOAL_MIN;
+        const progress = Math.min(100, Math.round(ml / WATER_GOAL_MIN * 100));
+        return `
+          <div class="water-card ${done ? "done" : ""}">
+            <div class="water-head">
+              <span class="box">${done ? "✓" : ""}</span>
+              <span class="item-text">
+                <strong>饮水</strong>
+                <span>${done ? "已达标" : "目标 2500–3000ml"} · 每次喝水后点一次</span>
+              </span>
+              <button type="button" class="tag detail-tag" data-diet-detail="water" title="查看具体饮水说明">说明</button>
+            </div>
+            <div class="water-total">${ml} ml</div>
+            <div class="progress"><div class="bar" style="width:${progress}%"></div></div>
+            <div class="water-actions">
+              <button type="button" class="btn primary" data-water-add="50">+50</button>
+              <button type="button" class="btn primary" data-water-add="100">+100</button>
+              <button type="button" class="btn" data-water-add="-100">-100</button>
+              <button type="button" class="btn ghost" data-water-reset>清零</button>
+            </div>
+          </div>
+        `;
       }
 
       function checkRowHtml({ done, title, detail, tag, id, disabled, detailKey }) {
@@ -1571,6 +1715,12 @@
 
       function addDays(date, amount) {
         const next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        next.setDate(next.getDate() + amount);
+        return formatDate(next);
+      }
+
+      function addDaysToKey(dateKey, amount) {
+        const next = parseDate(dateKey);
         next.setDate(next.getDate() + amount);
         return formatDate(next);
       }
