@@ -525,6 +525,92 @@
       line-height: 1.35;
     }
 
+    .nutrition-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .nutrition-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfb;
+      padding: 10px;
+      min-height: 78px;
+    }
+
+    .nutrition-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .nutrition-card b {
+      display: block;
+      margin-top: 6px;
+      font-size: 22px;
+      line-height: 1.15;
+    }
+
+    .nutrition-card em {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-style: normal;
+      font-size: 12px;
+    }
+
+    .nutrition-form {
+      display: grid;
+      gap: 9px;
+    }
+
+    .nutrition-warning {
+      display: none;
+      border-radius: var(--radius);
+      border: 1px solid #ffe2ab;
+      background: var(--amber-soft);
+      color: var(--amber);
+      padding: 10px 11px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .nutrition-warning.show {
+      display: block;
+    }
+
+    .food-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .food-entry {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 40px;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 10px;
+    }
+
+    .food-entry strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .food-entry span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
     .override-list {
       display: grid;
       gap: 8px;
@@ -829,6 +915,31 @@
           <div class="panel">
             <div class="panel-head">
               <div>
+                <h2>当日饮食记录</h2>
+                <div class="subtle" id="nutritionTargetText">今天吃了什么，随手记一句。</div>
+              </div>
+              <span class="pill" id="nutritionEntryCount">0条</span>
+            </div>
+            <div class="stack">
+              <div class="nutrition-grid" id="nutritionSummary"></div>
+              <div class="nutrition-form">
+                <label class="field">
+                  食物记录
+                  <textarea id="nutritionInput" placeholder="米饭一拳 鸡腿一个 青菜两份 香蕉一根"></textarea>
+                </label>
+                <div class="btn-row">
+                  <button class="btn primary" id="addNutritionEntry">添加</button>
+                  <button class="btn danger" id="clearNutritionEntries">清空今日饮食</button>
+                </div>
+                <div class="nutrition-warning" id="nutritionWarning"></div>
+              </div>
+              <div class="food-list" id="nutritionEntries"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
                 <h2>身体记录</h2>
                 <div class="subtle">最近 7 天平均体重：<strong id="avgWeight">暂无</strong></div>
               </div>
@@ -962,6 +1073,7 @@
   <script>
     (() => {
       const STORAGE_KEY = "personal-fitness-pwa-v1";
+      const NUTRITION_STORAGE_KEY = "fitness-nutrition-today-v1";
       const today = new Date();
       const todayKey = formatDate(today);
 
@@ -1046,6 +1158,48 @@
       const WATER_GOAL_MIN = 2500;
       const WATER_GOAL_IDEAL = 3000;
 
+      const FOOD_LIBRARY = [
+        food("米饭", ["白米饭", "饭"], { "拳": 120, "碗": 180, "份": 150, "g": 1 }, { kcal: 1.16, protein: 0.026, carbs: 0.26, fat: 0.003 }),
+        food("杂粮饭", ["糙米饭", "粗粮饭"], { "拳": 120, "碗": 180, "份": 150, "g": 1 }, { kcal: 1.18, protein: 0.03, carbs: 0.24, fat: 0.009 }),
+        food("玉米", ["玉米棒"], { "根": 150, "个": 150, "份": 150, "g": 1 }, { kcal: 1.06, protein: 0.04, carbs: 0.23, fat: 0.012 }),
+        food("红薯", ["地瓜"], { "个": 180, "根": 180, "份": 180, "拳": 120, "g": 1 }, { kcal: 0.86, protein: 0.016, carbs: 0.2, fat: 0.001 }),
+        food("燕麦", ["即食燕麦", "麦片"], { "勺": 15, "份": 45, "g": 1 }, { kcal: 3.8, protein: 0.13, carbs: 0.68, fat: 0.07 }),
+        food("全麦面包", ["面包", "吐司"], { "片": 35, "份": 70, "个": 35, "g": 1 }, { kcal: 2.5, protein: 0.09, carbs: 0.43, fat: 0.04 }),
+        food("鸡蛋", ["蛋", "水煮蛋"], { "个": 55, "份": 55, "g": 1 }, { kcal: 1.43, protein: 0.13, carbs: 0.01, fat: 0.095 }),
+        food("鸡腿", ["去皮鸡腿", "卤鸡腿"], { "个": 130, "掌": 100, "份": 120, "g": 1 }, { kcal: 1.75, protein: 0.22, carbs: 0, fat: 0.09 }),
+        food("鸡胸", ["鸡胸肉", "即食鸡胸"], { "包": 100, "掌": 100, "份": 100, "g": 1 }, { kcal: 1.65, protein: 0.31, carbs: 0, fat: 0.036 }),
+        food("牛肉", ["瘦牛肉"], { "掌": 100, "份": 120, "g": 1 }, { kcal: 1.9, protein: 0.26, carbs: 0, fat: 0.09 }),
+        food("鱼", ["鱼肉", "清蒸鱼"], { "掌": 100, "份": 120, "g": 1 }, { kcal: 1.2, protein: 0.22, carbs: 0, fat: 0.03 }),
+        food("虾", ["虾仁"], { "掌": 100, "份": 120, "g": 1 }, { kcal: 1.0, protein: 0.23, carbs: 0.01, fat: 0.01 }),
+        food("豆腐", ["嫩豆腐", "老豆腐"], { "块": 100, "份": 150, "g": 1 }, { kcal: 0.8, protein: 0.08, carbs: 0.02, fat: 0.045 }),
+        food("豆干", ["香干"], { "块": 60, "份": 100, "g": 1 }, { kcal: 1.5, protein: 0.16, carbs: 0.04, fat: 0.08 }),
+        food("无糖豆浆", ["豆浆"], { "杯": 300, "份": 300, "ml": 1 }, { kcal: 0.35, protein: 0.03, carbs: 0.02, fat: 0.016 }),
+        food("低脂奶", ["牛奶", "低脂牛奶"], { "盒": 250, "杯": 250, "份": 250, "ml": 1 }, { kcal: 0.46, protein: 0.034, carbs: 0.05, fat: 0.015 }),
+        food("无糖酸奶", ["酸奶"], { "杯": 250, "盒": 250, "份": 250, "g": 1 }, { kcal: 0.62, protein: 0.04, carbs: 0.06, fat: 0.025 }),
+        food("乳清蛋白", ["乳清", "蛋白粉"], { "勺": 30, "份": 30, "g": 1 }, { kcal: 4.0, protein: 0.75, carbs: 0.08, fat: 0.05 }),
+        food("青菜", ["绿叶菜", "蔬菜", "白菜", "生菜"], { "份": 120, "拳": 80, "g": 1 }, { kcal: 0.25, protein: 0.018, carbs: 0.04, fat: 0.003 }),
+        food("西兰花", ["西蓝花"], { "份": 120, "拳": 80, "g": 1 }, { kcal: 0.34, protein: 0.028, carbs: 0.07, fat: 0.004 }),
+        food("番茄", ["西红柿"], { "个": 180, "份": 120, "g": 1 }, { kcal: 0.18, protein: 0.009, carbs: 0.039, fat: 0.002 }),
+        food("香蕉", [], { "根": 120, "个": 120, "份": 120, "g": 1 }, { kcal: 0.89, protein: 0.011, carbs: 0.23, fat: 0.003 }),
+        food("苹果", [], { "个": 180, "份": 180, "g": 1 }, { kcal: 0.52, protein: 0.003, carbs: 0.14, fat: 0.002 }),
+        food("坚果", ["混合坚果"], { "包": 25, "份": 10, "g": 1 }, { kcal: 5.8, protein: 0.18, carbs: 0.2, fat: 0.5 })
+      ];
+
+      const CHINESE_NUMBERS = {
+        "半": 0.5,
+        "一": 1,
+        "两": 2,
+        "二": 2,
+        "三": 3,
+        "四": 4,
+        "五": 5,
+        "六": 6,
+        "七": 7,
+        "八": 8,
+        "九": 9,
+        "十": 10
+      };
+
       const dietDetails = {
         breakfast: {
           title: "早餐怎么吃",
@@ -1128,6 +1282,7 @@
       };
 
       let data = loadData();
+      let todayNutrition = loadTodayNutrition();
 
       const els = {
         todayText: $("#todayText"),
@@ -1153,6 +1308,12 @@
         trainingBar: $("#trainingBar"),
         trainingList: $("#trainingList"),
         trainingNote: $("#trainingNote"),
+        nutritionTargetText: $("#nutritionTargetText"),
+        nutritionEntryCount: $("#nutritionEntryCount"),
+        nutritionSummary: $("#nutritionSummary"),
+        nutritionInput: $("#nutritionInput"),
+        nutritionWarning: $("#nutritionWarning"),
+        nutritionEntries: $("#nutritionEntries"),
         avgWeight: $("#avgWeight"),
         recordStatus: $("#recordStatus"),
         weightInput: $("#weightInput"),
@@ -1211,6 +1372,21 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
 
+      function loadTodayNutrition() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(NUTRITION_STORAGE_KEY));
+          if (parsed && parsed.date === todayKey && Array.isArray(parsed.entries)) {
+            return { date: todayKey, entries: parsed.entries };
+          }
+        } catch {}
+        return { date: todayKey, entries: [] };
+      }
+
+      function saveTodayNutrition() {
+        todayNutrition.date = todayKey;
+        localStorage.setItem(NUTRITION_STORAGE_KEY, JSON.stringify(todayNutrition));
+      }
+
       function getDay(dateKey = todayKey) {
         if (!data.days[dateKey]) {
           data.days[dateKey] = { diet: {}, workout: {}, record: {}, note: "" };
@@ -1254,6 +1430,19 @@
           saveData();
           render();
           showToast("身体记录已保存");
+        });
+
+        $("#addNutritionEntry").addEventListener("click", addNutritionEntry);
+        els.nutritionInput.addEventListener("keydown", event => {
+          if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+            addNutritionEntry();
+          }
+        });
+        $("#clearNutritionEntries").addEventListener("click", () => {
+          todayNutrition.entries = [];
+          saveTodayNutrition();
+          renderNutrition();
+          showToast("今日饮食记录已清空");
         });
 
         $("#saveStartDate").addEventListener("click", () => {
@@ -1350,6 +1539,7 @@
         renderDiet(cycle, plan, day);
         renderTraining(cycle, plan, day);
         renderRecord(day);
+        renderNutrition(cycle, plan);
         renderStats();
         renderSettings();
         saveData();
@@ -1465,6 +1655,37 @@
         els.moodInput.value = record.mood ?? "";
         els.avgWeight.textContent = averageRecent("weight", 7);
         els.recordStatus.textContent = record.weight || record.waist || record.sleep || record.mood ? "已记录" : "今日";
+      }
+
+      function renderNutrition(cycle = getCycleDay(todayKey), plan = dayPlans[cycle]) {
+        const totals = sumNutrition(todayNutrition.entries);
+        els.nutritionTargetText.textContent = `${plan.type} · 热量目标 ${plan.calories} · 蛋白 ${plan.protein}`;
+        els.nutritionEntryCount.textContent = `${todayNutrition.entries.length}条`;
+        els.nutritionSummary.innerHTML = [
+          nutritionMetricHtml("能量", `${Math.round(totals.kcal)}`, "kcal"),
+          nutritionMetricHtml("蛋白质", totals.protein.toFixed(1), "g"),
+          nutritionMetricHtml("碳水", totals.carbs.toFixed(1), "g"),
+          nutritionMetricHtml("脂肪", totals.fat.toFixed(1), "g")
+        ].join("");
+
+        els.nutritionEntries.innerHTML = todayNutrition.entries.length ? todayNutrition.entries.map(entry => `
+          <div class="food-entry">
+            <div>
+              <strong>${escapeHtml(entry.label)}</strong>
+              <span>${formatNutrition(entry.total)}</span>
+              ${entry.unmatched.length ? `<span>未识别：${escapeHtml(entry.unmatched.join("、"))}</span>` : ""}
+            </div>
+            <button class="icon-btn" data-delete-nutrition="${entry.id}" aria-label="删除这条饮食记录">×</button>
+          </div>
+        `).join("") : `<div class="empty">今天还没有饮食记录。输入一句话后点击添加即可。</div>`;
+
+        document.querySelectorAll("[data-delete-nutrition]").forEach(button => {
+          button.addEventListener("click", () => {
+            todayNutrition.entries = todayNutrition.entries.filter(entry => entry.id !== button.dataset.deleteNutrition);
+            saveTodayNutrition();
+            renderNutrition(cycle, plan);
+          });
+        });
       }
 
       function renderStats() {
@@ -1609,6 +1830,110 @@
         els.dietDetailModal.classList.remove("show");
       }
 
+      function addNutritionEntry() {
+        const text = els.nutritionInput.value.trim();
+        if (!text) {
+          showNutritionWarning("先输入一条饮食记录，例如：米饭一拳 鸡腿一个 青菜两份。");
+          return;
+        }
+        const parsed = parseFoodInput(text);
+        if (!parsed.items.length) {
+          showNutritionWarning(`没有识别到可估算的食物：${parsed.unmatched.join("、") || text}`);
+          return;
+        }
+        const entry = {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          raw: text,
+          label: parsed.items.map(item => `${item.name} ${formatAmount(item.amount)}${item.unit}`).join(" + "),
+          items: parsed.items,
+          unmatched: parsed.unmatched,
+          total: sumNutrition(parsed.items)
+        };
+        todayNutrition.entries.unshift(entry);
+        saveTodayNutrition();
+        els.nutritionInput.value = "";
+        showNutritionWarning(parsed.unmatched.length ? `未识别：${parsed.unmatched.join("、")}。已先记录能识别的部分。` : "");
+        renderNutrition();
+      }
+
+      function showNutritionWarning(message) {
+        els.nutritionWarning.textContent = message;
+        els.nutritionWarning.classList.toggle("show", Boolean(message));
+      }
+
+      function parseFoodInput(text) {
+        const normalized = text
+          .replace(/[，,、。；;]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        const items = [];
+        const matches = [];
+        const sortedFoods = FOOD_LIBRARY
+          .flatMap(item => item.aliases.map(alias => ({ alias, item })))
+          .sort((a, b) => b.alias.length - a.alias.length);
+
+        sortedFoods.forEach(({ alias, item }) => {
+          const escaped = escapeRegExp(alias);
+          const amountPattern = "([0-9]+(?:\\.[0-9]+)?|半|一|两|二|三|四|五|六|七|八|九|十)";
+          const unitPattern = "(拳|碗|份|掌|个|根|片|勺|包|盒|杯|块|g|克|ml|毫升)";
+          const pattern = new RegExp(`(?:${amountPattern}\\s*)?${escaped}\\s*(?:${amountPattern}\\s*)?${unitPattern}?`, "g");
+          let match;
+          while ((match = pattern.exec(normalized)) !== null) {
+            if (!match[0]) continue;
+            const range = [match.index, match.index + match[0].length];
+            if (matches.some(existing => rangesOverlap(range, existing.range))) continue;
+            const amount = parseAmount(match[1] || match[2] || "1");
+            const unit = normalizeUnit(match[3] || item.defaultUnit);
+            const estimated = estimateFood(item, amount, unit);
+            if (!estimated) continue;
+            items.push({
+              name: item.name,
+              amount,
+              unit,
+              kcal: estimated.kcal,
+              protein: estimated.protein,
+              carbs: estimated.carbs,
+              fat: estimated.fat
+            });
+            matches.push({ range });
+          }
+        });
+
+        const residual = matches
+          .sort((a, b) => b.range[0] - a.range[0])
+          .reduce((textLeft, match) => `${textLeft.slice(0, match.range[0])} ${textLeft.slice(match.range[1])}`, normalized);
+        const unmatched = residual
+          .split(/\s+/)
+          .map(part => part.trim())
+          .filter(Boolean)
+          .filter(part => !/^[0-9.半一两二三四五六七八九十]+(拳|碗|份|掌|个|根|片|勺|包|盒|杯|块|g|克|ml|毫升)?$/.test(part));
+
+        return { items, unmatched: [...new Set(unmatched)] };
+      }
+
+      function estimateFood(item, amount, unit) {
+        const grams = item.units[unit] || item.units[item.defaultUnit];
+        if (!grams) return null;
+        const basis = grams * amount;
+        return {
+          kcal: item.per.kcal * basis,
+          protein: item.per.protein * basis,
+          carbs: item.per.carbs * basis,
+          fat: item.per.fat * basis
+        };
+      }
+
+      function sumNutrition(entries) {
+        return entries.reduce((sum, entry) => {
+          const source = entry.total || entry;
+          sum.kcal += Number(source.kcal) || 0;
+          sum.protein += Number(source.protein) || 0;
+          sum.carbs += Number(source.carbs) || 0;
+          sum.fat += Number(source.fat) || 0;
+          return sum;
+        }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+      }
+
       function isDietItemDone(day, key) {
         if (key === "water") return getWaterMl(day) >= WATER_GOAL_MIN;
         return Boolean(day.diet?.[key]);
@@ -1679,12 +2004,60 @@
         return `<div class="metric"><b>${value}</b><span>${label}</span></div>`;
       }
 
+      function nutritionMetricHtml(label, value, unit) {
+        return `<div class="nutrition-card"><span>${label}</span><b>${value}</b><em>${unit}</em></div>`;
+      }
+
       function statHtml(label, value, detail) {
         return `<div class="stat"><span>${label}</span><b>${value}</b><em>${detail}</em></div>`;
       }
 
+      function formatNutrition(nutrition) {
+        return `${Math.round(nutrition.kcal)} kcal · 蛋白 ${nutrition.protein.toFixed(1)}g · 碳水 ${nutrition.carbs.toFixed(1)}g · 脂肪 ${nutrition.fat.toFixed(1)}g`;
+      }
+
+      function formatAmount(value) {
+        return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
+      }
+
       function setProgress(el, rate) {
         el.style.width = `${Math.max(0, Math.min(100, rate))}%`;
+      }
+
+      function food(name, aliases, units, per) {
+        const normalizedUnits = {};
+        Object.entries(units).forEach(([unit, value]) => {
+          normalizedUnits[normalizeUnit(unit)] = value;
+        });
+        const defaultUnit = normalizeUnit(Object.keys(units)[0]);
+        return {
+          name,
+          aliases: [name, ...aliases],
+          units: normalizedUnits,
+          defaultUnit,
+          per
+        };
+      }
+
+      function parseAmount(value) {
+        if (!value) return 1;
+        if (CHINESE_NUMBERS[value] !== undefined) return CHINESE_NUMBERS[value];
+        const numeric = Number(value);
+        return Number.isFinite(numeric) && numeric > 0 ? numeric : 1;
+      }
+
+      function normalizeUnit(unit) {
+        if (unit === "克") return "g";
+        if (unit === "毫升") return "ml";
+        return unit || "份";
+      }
+
+      function rangesOverlap(a, b) {
+        return a[0] < b[1] && b[0] < a[1];
+      }
+
+      function escapeRegExp(value) {
+        return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       }
 
       function workoutKey(name) {
